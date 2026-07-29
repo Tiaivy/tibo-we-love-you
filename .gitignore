@@ -6,6 +6,8 @@ dist/
 Server/node_modules/
 Server/wrangler.jsonc
 Server/.dev.vars
+Server/.wrangler/
+HostedFeed/
 
 /*.jpg
 /preview*.png

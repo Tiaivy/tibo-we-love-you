@@ -7,6 +7,19 @@ Codex limit reset.
 
 ![Tibo, We Love You preview](DesignPreview/app-preview-v12-final.png)
 
+## Download
+
+[Download the latest macOS build](https://github.com/Tiaivy/tibo-we-love-you/releases/latest/download/TiboWeLoveYou-macOS.zip)
+
+Requires macOS 13 or later.
+
+1. Download and unzip `TiboWeLoveYou-macOS.zip`.
+2. Move `TiboWeLoveYou.app` to Applications.
+3. On first launch, right-click the app and choose **Open**.
+
+The app is ad-hoc signed but not Apple-notarized, so macOS may ask you to
+confirm it in **System Settings → Privacy & Security**.
+
 ## What it does
 
 - Lives quietly in the macOS menu bar.
@@ -19,12 +32,16 @@ Codex limit reset.
 
 ## Shared API architecture
 
-The central Worker checks `@thsottiaux` every 10 minutes, for 144 upstream
-TwitterAPI.io requests per day. Every installed app reads the same cached feed,
-so adding more users does not multiply TwitterAPI.io usage.
+The central Cloudflare Worker checks `@thsottiaux` at most once every 10
+minutes, for a maximum of 144 upstream TwitterAPI.io requests per day. Every
+installed app reads the same cached result, so adding more users does not
+multiply TwitterAPI.io usage.
 
-The Mac app polls the shared feed once per minute. Server code and deployment
-instructions are in [`Server/`](Server/).
+The Mac app polls the
+[shared feed](https://tiboweloveyou-feed.tiboweloveyou.workers.dev/v1/reset/latest)
+once per minute. The TwitterAPI.io key stays in Cloudflare and is never shipped
+inside the app. Server code and deployment instructions are in
+[`Server/`](Server/).
 
 ## Reset detection rules
 
