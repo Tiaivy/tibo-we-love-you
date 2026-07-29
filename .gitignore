@@ -1,0 +1,14 @@
+.DS_Store
+.build/
+dist/
+*.zip
+
+Server/node_modules/
+Server/wrangler.jsonc
+Server/.dev.vars
+
+/*.jpg
+/preview*.png
+
+/DesignPreview/*
+!/DesignPreview/app-preview-v12-final.png
