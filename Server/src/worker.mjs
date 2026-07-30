@@ -1,5 +1,6 @@
 const STATE_KEY = "monitor-state";
 const SOURCE_USERNAME = "thsottiaux";
+const INITIAL_LAST_RESET_AT = "2026-07-29T04:09:02.981Z";
 const TWITTER_API_URL =
   "https://api.twitterapi.io/twitter/user/last_tweets?userName=thsottiaux&includeReplies=false";
 
@@ -149,7 +150,9 @@ export async function pollTwitter(env, now = new Date()) {
     .map(({ tweet }) => normalizedTweetDate(tweet, now))
     .at(-1) ?? null;
   const lastResetAt = newerDate(
-    state.lastResetAt ?? state.latestEvent?.createdAt,
+    state.lastResetAt
+      ?? state.latestEvent?.createdAt
+      ?? INITIAL_LAST_RESET_AT,
     observedLastResetAt,
   );
 
@@ -352,7 +355,7 @@ function defaultState() {
     seeded: false,
     seenIds: [],
     latestEvent: null,
-    lastResetAt: null,
+    lastResetAt: INITIAL_LAST_RESET_AT,
     checkedAt: null,
     lastError: null,
   };
@@ -383,7 +386,10 @@ function publicSnapshot(state) {
     version: 1,
     source: SOURCE_USERNAME,
     checkedAt: state.checkedAt,
-    lastResetAt: state.lastResetAt ?? null,
+    lastResetAt:
+      state.lastResetAt
+      ?? state.latestEvent?.createdAt
+      ?? INITIAL_LAST_RESET_AT,
     event: state.latestEvent,
   };
 }

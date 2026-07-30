@@ -56,7 +56,7 @@ test("first poll seeds history; next poll publishes only the new reset", async (
         id: "old",
         text: "Codex usage limits have now been reset.",
         type: "tweet",
-        createdAt: "2026-07-29T00:00:00.000Z",
+        createdAt: "2026-07-30T00:00:00.000Z",
       },
     ],
     [
@@ -64,13 +64,13 @@ test("first poll seeds history; next poll publishes only the new reset", async (
         id: "new",
         text: "ChatGPT Work usage limits have been reset again.",
         type: "tweet",
-        createdAt: "2026-07-29T00:05:00.000Z",
+        createdAt: "2026-07-30T00:05:00.000Z",
       },
       {
         id: "old",
         text: "Codex usage limits have now been reset.",
         type: "tweet",
-        createdAt: "2026-07-29T00:00:00.000Z",
+        createdAt: "2026-07-30T00:00:00.000Z",
       },
     ],
   ];
@@ -80,14 +80,14 @@ test("first poll seeds history; next poll publishes only the new reset", async (
     UPSTREAM_FETCH: async () => twitterResponse(responses.shift()),
   };
 
-  const seeded = await pollTwitter(env, new Date("2026-07-29T00:01:00.000Z"));
+  const seeded = await pollTwitter(env, new Date("2026-07-30T00:01:00.000Z"));
   assert.equal(seeded.event, null);
-  assert.equal(seeded.lastResetAt, "2026-07-29T00:00:00.000Z");
+  assert.equal(seeded.lastResetAt, "2026-07-30T00:00:00.000Z");
 
-  const updated = await pollTwitter(env, new Date("2026-07-29T00:06:00.000Z"));
+  const updated = await pollTwitter(env, new Date("2026-07-30T00:06:00.000Z"));
   assert.equal(updated.event.id, "new");
   assert.equal(updated.event.signal, "confirmed");
-  assert.equal(updated.lastResetAt, "2026-07-29T00:05:00.000Z");
+  assert.equal(updated.lastResetAt, "2026-07-30T00:05:00.000Z");
 });
 
 test("public feed reads KV without touching TwitterAPI.io", async () => {
@@ -136,7 +136,7 @@ test("poll backfills the last reset time without replaying an alert", async () =
     JSON.stringify({
       seeded: true,
       seenIds: ["old"],
-      checkedAt: "2026-07-29T00:01:00.000Z",
+      checkedAt: "2026-07-30T00:01:00.000Z",
       latestEvent: null,
       lastError: null,
     }),
@@ -150,18 +150,18 @@ test("poll backfills the last reset time without replaying an alert", async () =
           id: "old",
           text: "Codex usage limits have now been reset.",
           type: "tweet",
-          createdAt: "2026-07-29T00:00:00.000Z",
+          createdAt: "2026-07-30T00:00:00.000Z",
         },
       ]),
   };
 
   const snapshot = await pollTwitter(
     env,
-    new Date("2026-07-29T00:10:00.000Z"),
+    new Date("2026-07-30T00:10:00.000Z"),
   );
 
   assert.equal(snapshot.event, null);
-  assert.equal(snapshot.lastResetAt, "2026-07-29T00:00:00.000Z");
+  assert.equal(snapshot.lastResetAt, "2026-07-30T00:00:00.000Z");
 });
 
 test("manual poll is protected by an admin token", async () => {
