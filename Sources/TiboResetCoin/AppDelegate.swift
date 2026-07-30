@@ -107,11 +107,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         description: String
     ) -> NSImage {
         let renderer = ImageRenderer(
-            content: ResetButtonGraphic(
-                isPressed: isPressed,
-                pulseIsVisible: false
-            )
-            .frame(width: 22, height: 22)
+            content: MenuBarButtonIcon(isPressed: isPressed)
+                .frame(width: 22, height: 22)
         )
         renderer.scale = NSScreen.main?.backingScaleFactor ?? 2
 
@@ -157,5 +154,58 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func quit() {
         NSApplication.shared.terminate(nil)
+    }
+}
+
+private struct MenuBarButtonIcon: View {
+    let isPressed: Bool
+
+    var body: some View {
+        GeometryReader { geometry in
+            let size = min(geometry.size.width, geometry.size.height)
+            let pressOffset = isPressed ? size * 0.09 : 0
+
+            ZStack {
+                Ellipse()
+                    .fill(Color(red: 0.08, green: 0.09, blue: 0.10))
+                    .frame(width: size * 0.92, height: size * 0.36)
+                    .offset(y: size * 0.25)
+
+                Ellipse()
+                    .fill(Color(red: 0.25, green: 0.27, blue: 0.29))
+                    .frame(width: size * 0.82, height: size * 0.28)
+                    .offset(y: size * 0.15)
+
+                RoundedRectangle(
+                    cornerRadius: size * 0.12,
+                    style: .continuous
+                )
+                    .fill(Color(red: 0.72, green: 0.03, blue: 0.05))
+                    .frame(
+                        width: size * 0.60,
+                        height: size * (isPressed ? 0.28 : 0.38)
+                    )
+                    .offset(y: pressOffset - size * 0.02)
+
+                Ellipse()
+                    .fill(Color(red: 0.96, green: 0.06, blue: 0.08))
+                    .frame(width: size * 0.60, height: size * 0.27)
+                    .offset(y: pressOffset - size * 0.19)
+
+                Ellipse()
+                    .stroke(
+                        Color.white.opacity(0.42),
+                        lineWidth: max(0.7, size * 0.035)
+                    )
+                    .frame(width: size * 0.51, height: size * 0.16)
+                    .offset(y: pressOffset - size * 0.20)
+            }
+            .frame(width: size, height: size)
+            .frame(
+                maxWidth: .infinity,
+                maxHeight: .infinity,
+                alignment: .center
+            )
+        }
     }
 }
