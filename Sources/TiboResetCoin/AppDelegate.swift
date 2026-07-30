@@ -201,6 +201,7 @@ private struct MenuBarButtonIcon: View {
                     .offset(y: pressOffset - size * 0.20)
             }
             .frame(width: size, height: size)
+            .scaleEffect(0.90)
             .frame(
                 maxWidth: .infinity,
                 maxHeight: .infinity,
