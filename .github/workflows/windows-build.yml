@@ -1,0 +1,48 @@
+name: Build Windows app
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish Windows x64 app
+        shell: pwsh
+        run: |
+          dotnet publish .\Windows\TiboWeLoveYou.Windows.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            --output .\dist\windows
+          Remove-Item .\dist\windows\*.pdb -ErrorAction SilentlyContinue
+          Compress-Archive `
+            -Path .\dist\windows\* `
+            -DestinationPath .\dist\TiboWeLoveYou-Windows-x64.zip
+
+      - name: Keep workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TiboWeLoveYou-Windows-x64
+          path: dist/TiboWeLoveYou-Windows-x64.zip
+
+      - name: Add Windows build to v1.1.0
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload v1.1.0 `
+            .\dist\TiboWeLoveYou-Windows-x64.zip `
+            --clobber
