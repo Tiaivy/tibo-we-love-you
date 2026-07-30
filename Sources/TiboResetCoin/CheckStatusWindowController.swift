@@ -6,7 +6,7 @@ final class CheckStatusWindowController {
     private var panel: NSPanel?
     private var autoDismissTask: Task<Void, Never>?
 
-    func show(checkedAt: Date?, on screen: NSScreen?) {
+    func show(lastResetAt: Date?, on screen: NSScreen?) {
         close(animated: false)
 
         let panel = NSPanel(
@@ -27,7 +27,7 @@ final class CheckStatusWindowController {
         panel.hidesOnDeactivate = false
         panel.contentView = NSHostingView(
             rootView: CheckStatusView(
-                checkedAt: checkedAt,
+                lastResetAt: lastResetAt,
                 now: Date()
             )
         )
@@ -90,7 +90,7 @@ final class CheckStatusWindowController {
 }
 
 struct CheckStatusView: View {
-    let checkedAt: Date?
+    let lastResetAt: Date?
     let now: Date
 
     var body: some View {
@@ -106,13 +106,13 @@ struct CheckStatusView: View {
                         Color(red: 0.07, green: 0.075, blue: 0.085)
                     )
 
-                Text(lastCheckedText)
+                Text(lastResetText)
                     .font(.system(size: 11.5, weight: .regular))
                     .foregroundStyle(
                         Color(red: 0.43, green: 0.46, blue: 0.49)
                     )
 
-                Text(nextCheckText)
+                Text(elapsedText)
                     .font(.system(size: 11.5, weight: .regular))
                     .foregroundStyle(
                         Color(red: 0.43, green: 0.46, blue: 0.49)
@@ -144,30 +144,70 @@ struct CheckStatusView: View {
         .padding(8)
     }
 
-    private var lastCheckedText: String {
-        guard let checkedAt else {
-            return "Last check time unavailable"
+    private var lastResetText: String {
+        guard let lastResetAt else {
+            return "No Tibo reset recorded yet"
         }
-        let formatted = checkedAt.formatted(
+        let formatted = lastResetAt.formatted(
             date: .abbreviated,
             time: .shortened
         )
-        return "Last checked · \(formatted)"
+        return "Last Tibo reset · \(formatted)"
     }
 
-    private var nextCheckText: String {
-        guard let checkedAt else {
-            return "Next check coming shortly"
+    private var elapsedText: String {
+        guard let lastResetAt else {
+            return "Waiting for the first confirmed reset"
         }
-        let nextCheck = checkedAt.addingTimeInterval(10 * 60)
-        guard nextCheck > now else {
-            return "Next check coming shortly"
-        }
-        let formatted = nextCheck.formatted(
-            date: .omitted,
-            time: .shortened
+        return CheckStatusCopy.elapsed(since: lastResetAt, now: now)
+    }
+}
+
+enum CheckStatusCopy {
+    static func elapsed(since resetDate: Date, now: Date) -> String {
+        let totalMinutes = max(
+            0,
+            Int(now.timeIntervalSince(resetDate) / 60)
         )
-        return "Next check by \(formatted)"
+        guard totalMinutes > 0 else {
+            return "Less than a minute ago"
+        }
+
+        let days = totalMinutes / (24 * 60)
+        let hours = (totalMinutes % (24 * 60)) / 60
+        let minutes = totalMinutes % 60
+
+        if days > 0 {
+            return joined(
+                first: unit(days, singular: "day"),
+                second: hours > 0
+                    ? unit(hours, singular: "hour")
+                    : nil
+            )
+        }
+        if hours > 0 {
+            return joined(
+                first: unit(hours, singular: "hour"),
+                second: minutes > 0
+                    ? unit(minutes, singular: "minute")
+                    : nil
+            )
+        }
+        return "\(unit(minutes, singular: "minute")) ago"
+    }
+
+    private static func joined(
+        first: String,
+        second: String?
+    ) -> String {
+        [first, second]
+            .compactMap { $0 }
+            .joined(separator: ", ")
+            + " ago"
+    }
+
+    private static func unit(_ value: Int, singular: String) -> String {
+        "\(value) \(singular)\(value == 1 ? "" : "s")"
     }
 }
 

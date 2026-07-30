@@ -4,6 +4,7 @@ struct ResetFeedSnapshot: Decodable, Sendable {
     let version: Int
     let source: String
     let checkedAt: String?
+    let lastResetAt: String?
     let event: ResetFeedEvent?
 }
 

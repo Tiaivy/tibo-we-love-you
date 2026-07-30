@@ -71,7 +71,9 @@ final class MonitorService {
             )
             state = .polling
             if showStatus && !didAlert {
-                onCheckStatus?(ResetFeedClient.date(from: snapshot.checkedAt))
+                onCheckStatus?(
+                    ResetFeedClient.date(from: snapshot.lastResetAt)
+                )
             }
         } catch {
             state = .offline(

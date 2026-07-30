@@ -73,10 +73,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             )
             self.flashStatusIcon()
         }
-        monitor.onCheckStatus = { [weak self] checkedAt in
+        monitor.onCheckStatus = { [weak self] lastResetAt in
             guard let self, !self.alertWindow.isVisible else { return }
             self.checkStatusWindow.show(
-                checkedAt: checkedAt,
+                lastResetAt: lastResetAt,
                 on: self.statusItem.button?.window?.screen
             )
         }

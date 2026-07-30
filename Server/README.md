@@ -44,6 +44,6 @@ without sending an old alert. Public feed reads never call TwitterAPI.io.
 
 ## Endpoints
 
-- `GET /v1/reset/latest` — cached public snapshot for Mac clients
+- `GET /v1/reset/latest` — cached public snapshot, including `lastResetAt`
 - `GET /healthz` — last polling status
 - `POST /v1/admin/poll` — protected manual poll using `Authorization: Bearer …`

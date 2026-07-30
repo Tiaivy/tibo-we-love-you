@@ -138,6 +138,20 @@ export async function pollTwitter(env, now = new Date()) {
   const originalTweets = tweets
     .filter(isOriginalTweet)
     .sort((left, right) => tweetTimestamp(left) - tweetTimestamp(right));
+  const classifiedTweets = originalTweets.map((tweet) => ({
+    tweet,
+    signal: classifyReset(
+      typeof tweet.text === "string" ? tweet.text : "",
+    ),
+  }));
+  const observedLastResetAt = classifiedTweets
+    .filter(({ signal }) => signal === "confirmed")
+    .map(({ tweet }) => normalizedTweetDate(tweet, now))
+    .at(-1) ?? null;
+  const lastResetAt = newerDate(
+    state.lastResetAt ?? state.latestEvent?.createdAt,
+    observedLastResetAt,
+  );
 
   if (!state.seeded) {
     for (const tweet of tweets) {
@@ -151,6 +165,7 @@ export async function pollTwitter(env, now = new Date()) {
       ...state,
       seeded: true,
       seenIds: limitSeenIDs(seen),
+      lastResetAt,
       checkedAt: now.toISOString(),
       lastError: null,
     };
@@ -159,19 +174,18 @@ export async function pollTwitter(env, now = new Date()) {
   }
 
   let latestEvent = state.latestEvent;
-  for (const tweet of originalTweets) {
+  for (const { tweet, signal } of classifiedTweets) {
     const id = tweetID(tweet);
     if (!id || seen.has(id)) {
       continue;
     }
     seen.add(id);
 
-    const text = typeof tweet.text === "string" ? tweet.text : "";
-    const signal = classifyReset(text);
     if (!signal) {
       continue;
     }
 
+    const text = typeof tweet.text === "string" ? tweet.text : "";
     latestEvent = {
       id,
       signal,
@@ -196,6 +210,7 @@ export async function pollTwitter(env, now = new Date()) {
     ...state,
     seeded: true,
     latestEvent,
+    lastResetAt,
     seenIds: limitSeenIDs(seen),
     checkedAt: now.toISOString(),
     lastError: null,
@@ -299,6 +314,22 @@ function normalizedTweetDate(tweet, fallback) {
   return timestamp > 0 ? new Date(timestamp).toISOString() : fallback.toISOString();
 }
 
+function newerDate(current, candidate) {
+  const currentTimestamp = Date.parse(current ?? "");
+  const candidateTimestamp = Date.parse(candidate ?? "");
+
+  if (!Number.isFinite(candidateTimestamp)) {
+    return Number.isFinite(currentTimestamp) ? current : null;
+  }
+  if (
+    !Number.isFinite(currentTimestamp)
+    || candidateTimestamp > currentTimestamp
+  ) {
+    return candidate;
+  }
+  return current;
+}
+
 function limitSeenIDs(seen) {
   return Array.from(seen).slice(-300);
 }
@@ -321,6 +352,7 @@ function defaultState() {
     seeded: false,
     seenIds: [],
     latestEvent: null,
+    lastResetAt: null,
     checkedAt: null,
     lastError: null,
   };
@@ -351,6 +383,7 @@ function publicSnapshot(state) {
     version: 1,
     source: SOURCE_USERNAME,
     checkedAt: state.checkedAt,
+    lastResetAt: state.lastResetAt ?? null,
     event: state.latestEvent,
   };
 }

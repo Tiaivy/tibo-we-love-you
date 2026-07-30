@@ -124,7 +124,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 throw new InvalidDataException("The central feed returned no data.");
             }
 
-            var checkedAt = ParseDate(snapshot.CheckedAt);
+            var lastResetAt = ParseDate(snapshot.LastResetAt);
             var didAlert = ProcessSnapshot(
                 snapshot,
                 seedIfNeeded && _isFirstCheck
@@ -135,7 +135,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 && _resetAlert?.Visible != true
             )
             {
-                StatusPopupForm.ShowStatus(checkedAt);
+                StatusPopupForm.ShowStatus(lastResetAt);
             }
         }
         catch when (showStatus)
@@ -259,7 +259,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
 internal sealed class StatusPopupForm : PopupForm
 {
-    private readonly DateTimeOffset? _checkedAt;
+    private readonly DateTimeOffset? _lastResetAt;
     private readonly bool _isUnavailable;
     private readonly Image _emoji = AssetLoader.LoadImage(
         "CheckStatusEmoji.jpg"
@@ -267,12 +267,12 @@ internal sealed class StatusPopupForm : PopupForm
     private readonly System.Windows.Forms.Timer _dismissTimer;
 
     private StatusPopupForm(
-        DateTimeOffset? checkedAt,
+        DateTimeOffset? lastResetAt,
         bool isUnavailable
     )
         : base(new Size(342, 124))
     {
-        _checkedAt = checkedAt;
+        _lastResetAt = lastResetAt;
         _isUnavailable = isUnavailable;
         _dismissTimer = new System.Windows.Forms.Timer
         {
@@ -282,9 +282,9 @@ internal sealed class StatusPopupForm : PopupForm
         Shown += (_, _) => _dismissTimer.Start();
     }
 
-    internal static void ShowStatus(DateTimeOffset? checkedAt)
+    internal static void ShowStatus(DateTimeOffset? lastResetAt)
     {
-        new StatusPopupForm(checkedAt, isUnavailable: false).ShowAtTray();
+        new StatusPopupForm(lastResetAt, isUnavailable: false).ShowAtTray();
     }
 
     internal static void ShowUnavailable()
@@ -367,14 +367,14 @@ internal sealed class StatusPopupForm : PopupForm
             19
         );
         graphics.DrawString(
-            LastCheckedText(),
+            LastResetText(),
             bodyFont,
             bodyBrush,
             102,
             47
         );
         graphics.DrawString(
-            NextCheckText(),
+            ElapsedText(),
             bodyFont,
             bodyBrush,
             102,
@@ -389,24 +389,58 @@ internal sealed class StatusPopupForm : PopupForm
         );
     }
 
-    private string LastCheckedText()
+    private string LastResetText()
     {
-        return _checkedAt is null
-            ? "Last check time unavailable"
-            : $"Last checked · {_checkedAt.Value.ToLocalTime():MMM d, yyyy HH:mm}";
+        return _lastResetAt is null
+            ? "No Tibo reset recorded yet"
+            : $"Last Tibo reset · {_lastResetAt.Value.ToLocalTime():MMM d, yyyy HH:mm}";
     }
 
-    private string NextCheckText()
+    private string ElapsedText()
     {
-        if (_checkedAt is null)
+        if (_lastResetAt is null)
         {
-            return "Next check coming shortly";
+            return "Waiting for the first confirmed reset";
         }
 
-        var next = _checkedAt.Value.ToLocalTime().AddMinutes(10);
-        return next <= DateTimeOffset.Now
-            ? "Next check coming shortly"
-            : $"Next check by {next:HH:mm}";
+        var elapsed = DateTimeOffset.Now - _lastResetAt.Value.ToLocalTime();
+        var totalMinutes = Math.Max(0, (int)elapsed.TotalMinutes);
+        if (totalMinutes == 0)
+        {
+            return "Less than a minute ago";
+        }
+
+        var days = totalMinutes / (24 * 60);
+        var hours = (totalMinutes % (24 * 60)) / 60;
+        var minutes = totalMinutes % 60;
+
+        if (days > 0)
+        {
+            return JoinElapsed(
+                Unit(days, "day"),
+                hours > 0 ? Unit(hours, "hour") : null
+            );
+        }
+        if (hours > 0)
+        {
+            return JoinElapsed(
+                Unit(hours, "hour"),
+                minutes > 0 ? Unit(minutes, "minute") : null
+            );
+        }
+        return $"{Unit(minutes, "minute")} ago";
+    }
+
+    private static string JoinElapsed(string first, string? second)
+    {
+        return second is null
+            ? $"{first} ago"
+            : $"{first}, {second} ago";
+    }
+
+    private static string Unit(int value, string singular)
+    {
+        return $"{value} {singular}{(value == 1 ? "" : "s")}";
     }
 }
 
@@ -687,6 +721,7 @@ internal sealed record FeedSnapshot(
     int Version,
     string Source,
     string? CheckedAt,
+    string? LastResetAt,
     FeedEvent? Event
 );
 

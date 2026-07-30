@@ -99,6 +99,22 @@ func parsesCentralFeedTimestamp() {
 
 @Test
 @MainActor
+func formatsTimeSinceLastReset() throws {
+    let resetDate = try #require(
+        ResetFeedClient.date(from: "2026-07-28T08:00:00.000Z")
+    )
+    let now = try #require(
+        ResetFeedClient.date(from: "2026-07-30T12:15:00.000Z")
+    )
+
+    #expect(
+        CheckStatusCopy.elapsed(since: resetDate, now: now)
+            == "2 days, 4 hours ago"
+    )
+}
+
+@Test
+@MainActor
 func manualCheckShowsStatusOnlyWhenNothingIsNew() async throws {
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [StubURLProtocol.self]
@@ -112,6 +128,7 @@ func manualCheckShowsStatusOnlyWhenNothingIsNew() async throws {
       "version": 1,
       "source": "thsottiaux",
       "checkedAt": "2026-07-30T12:30:00.000Z",
+      "lastResetAt": "2026-07-28T08:00:00.000Z",
       "event": null
     }
     """.data(using: .utf8)!
@@ -125,14 +142,19 @@ func manualCheckShowsStatusOnlyWhenNothingIsNew() async throws {
         defaults: statusDefaults,
         client: client
     )
-    var statusCount = 0
+    var statusDate: Date?
     var alertCount = 0
-    statusMonitor.onCheckStatus = { _ in statusCount += 1 }
+    statusMonitor.onCheckStatus = { statusDate = $0 }
     statusMonitor.onAlert = { _ in alertCount += 1 }
 
     await statusMonitor.checkNow(showStatus: true)
 
-    #expect(statusCount == 1)
+    #expect(
+        statusDate
+            == ResetFeedClient.date(
+                from: "2026-07-28T08:00:00.000Z"
+            )
+    )
     #expect(alertCount == 0)
 
     StubURLProtocol.payload = """
@@ -140,6 +162,7 @@ func manualCheckShowsStatusOnlyWhenNothingIsNew() async throws {
       "version": 1,
       "source": "thsottiaux",
       "checkedAt": "2026-07-30T12:40:00.000Z",
+      "lastResetAt": "2026-07-30T12:39:00.000Z",
       "event": {
         "id": "new-reset",
         "signal": "confirmed",

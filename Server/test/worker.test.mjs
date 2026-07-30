@@ -82,10 +82,12 @@ test("first poll seeds history; next poll publishes only the new reset", async (
 
   const seeded = await pollTwitter(env, new Date("2026-07-29T00:01:00.000Z"));
   assert.equal(seeded.event, null);
+  assert.equal(seeded.lastResetAt, "2026-07-29T00:00:00.000Z");
 
   const updated = await pollTwitter(env, new Date("2026-07-29T00:06:00.000Z"));
   assert.equal(updated.event.id, "new");
   assert.equal(updated.event.signal, "confirmed");
+  assert.equal(updated.lastResetAt, "2026-07-29T00:05:00.000Z");
 });
 
 test("public feed reads KV without touching TwitterAPI.io", async () => {
@@ -96,6 +98,7 @@ test("public feed reads KV without touching TwitterAPI.io", async () => {
       seeded: true,
       seenIds: ["new"],
       checkedAt: "2026-07-29T00:06:00.000Z",
+      lastResetAt: "2026-07-29T00:05:00.000Z",
       lastError: null,
       latestEvent: {
         id: "new",
@@ -121,7 +124,44 @@ test("public feed reads KV without touching TwitterAPI.io", async () => {
 
   assert.equal(response.status, 200);
   assert.equal(upstreamCalls, 0);
-  assert.equal((await response.json()).event.id, "new");
+  const body = await response.json();
+  assert.equal(body.event.id, "new");
+  assert.equal(body.lastResetAt, "2026-07-29T00:05:00.000Z");
+});
+
+test("poll backfills the last reset time without replaying an alert", async () => {
+  const kv = new FakeKV();
+  await kv.put(
+    "monitor-state",
+    JSON.stringify({
+      seeded: true,
+      seenIds: ["old"],
+      checkedAt: "2026-07-29T00:01:00.000Z",
+      latestEvent: null,
+      lastError: null,
+    }),
+  );
+  const env = {
+    TIBO_STATE: kv,
+    TWITTERAPI_IO_KEY: "test-only",
+    UPSTREAM_FETCH: async () =>
+      twitterResponse([
+        {
+          id: "old",
+          text: "Codex usage limits have now been reset.",
+          type: "tweet",
+          createdAt: "2026-07-29T00:00:00.000Z",
+        },
+      ]),
+  };
+
+  const snapshot = await pollTwitter(
+    env,
+    new Date("2026-07-29T00:10:00.000Z"),
+  );
+
+  assert.equal(snapshot.event, null);
+  assert.equal(snapshot.lastResetAt, "2026-07-29T00:00:00.000Z");
 });
 
 test("manual poll is protected by an admin token", async () => {

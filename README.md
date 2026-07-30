@@ -36,14 +36,15 @@ appears, choose **More info → Run anyway**.
 - Alerts only when a post clearly confirms a completed ChatGPT or Codex
   allowance reset.
 - Shows a compact, silent red-button animation in the top-right corner.
-- Gives `Check now` a lightweight status card with the latest feed time.
+- Gives `Check now` a lightweight status card with the last confirmed reset.
 - Keeps the alert visible until you close it or open the original post on X.
 - Never ships the TwitterAPI.io key inside either desktop app.
 
 ## Check now, but cuter
 
-When there is nothing new, `Check now` shows the latest feed time in a small,
-quiet card. Only a newly detected reset gets the animated red-button alert.
+When there is nothing new, `Check now` shows Tibo's last confirmed reset time
+and how long ago it happened. Only a newly detected reset gets the animated
+red-button alert.
 
 <img src="https://raw.githubusercontent.com/Tiaivy/tibo-we-love-you/main/DesignPreview/check-now-status-v1.1.png" alt="Check now status card" width="342" />
 
