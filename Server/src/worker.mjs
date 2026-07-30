@@ -149,10 +149,12 @@ export async function pollTwitter(env, now = new Date()) {
     .filter(({ signal }) => signal === "confirmed")
     .map(({ tweet }) => normalizedTweetDate(tweet, now))
     .at(-1) ?? null;
+  const storedLastResetAt = newerDate(
+    INITIAL_LAST_RESET_AT,
+    state.lastResetAt ?? state.latestEvent?.createdAt,
+  );
   const lastResetAt = newerDate(
-    state.lastResetAt
-      ?? state.latestEvent?.createdAt
-      ?? INITIAL_LAST_RESET_AT,
+    storedLastResetAt,
     observedLastResetAt,
   );
 
@@ -386,10 +388,10 @@ function publicSnapshot(state) {
     version: 1,
     source: SOURCE_USERNAME,
     checkedAt: state.checkedAt,
-    lastResetAt:
-      state.lastResetAt
-      ?? state.latestEvent?.createdAt
-      ?? INITIAL_LAST_RESET_AT,
+    lastResetAt: newerDate(
+      INITIAL_LAST_RESET_AT,
+      state.lastResetAt ?? state.latestEvent?.createdAt,
+    ),
     event: state.latestEvent,
   };
 }

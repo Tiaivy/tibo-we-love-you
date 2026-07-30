@@ -97,16 +97,16 @@ test("public feed reads KV without touching TwitterAPI.io", async () => {
     JSON.stringify({
       seeded: true,
       seenIds: ["new"],
-      checkedAt: "2026-07-29T00:06:00.000Z",
-      lastResetAt: "2026-07-29T00:05:00.000Z",
+      checkedAt: "2026-07-30T00:06:00.000Z",
+      lastResetAt: "2026-07-30T00:05:00.000Z",
       lastError: null,
       latestEvent: {
         id: "new",
         signal: "confirmed",
         text: "Codex usage limits have been reset.",
         url: "https://x.com/thsottiaux/status/new",
-        createdAt: "2026-07-29T00:05:00.000Z",
-        detectedAt: "2026-07-29T00:06:00.000Z",
+        createdAt: "2026-07-30T00:05:00.000Z",
+        detectedAt: "2026-07-30T00:06:00.000Z",
       },
     }),
   );
@@ -126,7 +126,7 @@ test("public feed reads KV without touching TwitterAPI.io", async () => {
   assert.equal(upstreamCalls, 0);
   const body = await response.json();
   assert.equal(body.event.id, "new");
-  assert.equal(body.lastResetAt, "2026-07-29T00:05:00.000Z");
+  assert.equal(body.lastResetAt, "2026-07-30T00:05:00.000Z");
 });
 
 test("poll backfills the last reset time without replaying an alert", async () => {
@@ -162,6 +162,29 @@ test("poll backfills the last reset time without replaying an alert", async () =
 
   assert.equal(snapshot.event, null);
   assert.equal(snapshot.lastResetAt, "2026-07-30T00:00:00.000Z");
+});
+
+test("older cached reset never overrides the verified baseline", async () => {
+  const kv = new FakeKV();
+  await kv.put(
+    "monitor-state",
+    JSON.stringify({
+      seeded: true,
+      seenIds: [],
+      checkedAt: "2026-07-30T00:01:00.000Z",
+      lastResetAt: "2026-07-28T03:09:23.000Z",
+      latestEvent: null,
+      lastError: null,
+    }),
+  );
+
+  const response = await worker.fetch(
+    new Request("https://example.com/v1/reset/latest"),
+    { TIBO_STATE: kv },
+  );
+  const snapshot = await response.json();
+
+  assert.equal(snapshot.lastResetAt, "2026-07-29T04:09:02.981Z");
 });
 
 test("manual poll is protected by an admin token", async () => {
