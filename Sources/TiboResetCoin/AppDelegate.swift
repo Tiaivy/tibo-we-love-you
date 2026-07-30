@@ -6,6 +6,7 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let monitor = MonitorService()
     private let alertWindow = AlertWindowController()
+    private let checkStatusWindow = CheckStatusWindowController()
 
     private var statusItem: NSStatusItem!
     private let launchAtLoginMenuItem = NSMenuItem(
@@ -65,11 +66,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         monitor.onAlert = { [weak self] alert in
             guard let self else { return }
+            self.checkStatusWindow.close(animated: false)
             self.alertWindow.show(
                 alert,
                 on: self.statusItem.button?.window?.screen
             )
             self.flashStatusIcon()
+        }
+        monitor.onCheckStatus = { [weak self] checkedAt in
+            guard let self, !self.alertWindow.isVisible else { return }
+            self.checkStatusWindow.show(
+                checkedAt: checkedAt,
+                on: self.statusItem.button?.window?.screen
+            )
         }
     }
 
@@ -122,7 +131,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func checkNow() {
-        Task { await monitor.checkNow() }
+        Task { await monitor.checkNow(showStatus: true) }
     }
 
     @objc private func testAnimation() {

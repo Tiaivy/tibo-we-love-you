@@ -26,6 +26,9 @@ cp \
 cp \
     "$PROJECT_DIR/Sources/TiboResetCoin/Resources/TiboButtonPhoto.png" \
     "$APP_DIR/Contents/Resources/TiboButtonPhoto.png"
+cp \
+    "$PROJECT_DIR/Sources/TiboResetCoin/Resources/CheckStatusEmoji.jpg" \
+    "$APP_DIR/Contents/Resources/CheckStatusEmoji.jpg"
 
 if [[ -n "${TIBO_RESET_FEED_URL:-}" ]]; then
     /usr/libexec/PlistBuddy \

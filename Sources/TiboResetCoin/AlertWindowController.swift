@@ -5,6 +5,10 @@ import SwiftUI
 final class AlertWindowController {
     private var panel: NSPanel?
 
+    var isVisible: Bool {
+        panel != nil
+    }
+
     func show(_ alert: CoinAlert, on screen: NSScreen?) {
         close(animated: false)
 

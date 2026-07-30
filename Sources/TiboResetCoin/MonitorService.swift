@@ -14,13 +14,18 @@ final class MonitorService {
 
     var onStateChange: ((MonitorState) -> Void)?
     var onAlert: ((CoinAlert) -> Void)?
+    var onCheckStatus: ((Date?) -> Void)?
 
     private(set) var state: MonitorState = .starting {
         didSet { onStateChange?(state) }
     }
 
-    init(defaults: UserDefaults = .standard) {
+    init(
+        defaults: UserDefaults = .standard,
+        client: ResetFeedClient? = nil
+    ) {
         self.defaults = defaults
+        self.client = client
         let saved = defaults.stringArray(forKey: DefaultsKey.seenTweetIDs) ?? []
         self.seenTweetIDs = Set(saved)
         self.isFirstFeedCheck = saved.isEmpty
@@ -46,7 +51,10 @@ final class MonitorService {
         }
     }
 
-    func checkNow(seedIfNeeded: Bool = false) async {
+    func checkNow(
+        seedIfNeeded: Bool = false,
+        showStatus: Bool = false
+    ) async {
         guard let client else {
             if state != .missingServerEndpoint {
                 start()
@@ -57,11 +65,14 @@ final class MonitorService {
         state = .checking
         do {
             let snapshot = try await client.fetchLatest()
-            process(
+            let didAlert = process(
                 snapshot,
                 seedOnly: seedIfNeeded && isFirstFeedCheck
             )
             state = .polling
+            if showStatus && !didAlert {
+                onCheckStatus?(ResetFeedClient.date(from: snapshot.checkedAt))
+            }
         } catch {
             state = .offline(
                 (error as? LocalizedError)?.errorDescription ?? "Check failed"
@@ -85,20 +96,24 @@ final class MonitorService {
         onAlert?(CoinAlert(signal: .confirmed, tweet: tweet))
     }
 
-    private func process(_ snapshot: ResetFeedSnapshot, seedOnly: Bool) {
+    @discardableResult
+    private func process(
+        _ snapshot: ResetFeedSnapshot,
+        seedOnly: Bool
+    ) -> Bool {
         guard let event = snapshot.event else {
             isFirstFeedCheck = false
-            return
+            return false
         }
         if seedOnly {
             seenTweetIDs.insert(event.id)
             isFirstFeedCheck = false
             persistSeenIDs()
-            return
+            return false
         }
 
         guard !seenTweetIDs.contains(event.id) else {
-            return
+            return false
         }
         seenTweetIDs.insert(event.id)
         isFirstFeedCheck = false
@@ -108,7 +123,7 @@ final class MonitorService {
             let url = URL(string: event.url)
         else {
             persistSeenIDs()
-            return
+            return false
         }
 
         let tweet = Tweet(
@@ -123,6 +138,7 @@ final class MonitorService {
         let alert = CoinAlert(signal: .confirmed, tweet: tweet)
         onAlert?(alert)
         persistSeenIDs()
+        return true
     }
 
     private func persistSeenIDs() {

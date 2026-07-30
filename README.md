@@ -27,8 +27,16 @@ confirm it in **System Settings → Privacy & Security**.
 - Alerts only when a post clearly confirms a completed ChatGPT or Codex
   allowance reset.
 - Shows a compact, silent red-button animation in the top-right corner.
+- Gives `Check now` a lightweight status card with the latest feed time.
 - Keeps the alert visible until you close it or open the original post on X.
 - Never ships the TwitterAPI.io key inside the Mac app.
+
+## Check now, but cuter
+
+When there is nothing new, `Check now` shows the latest feed time in a small,
+quiet card. Only a newly detected reset gets the animated red-button alert.
+
+![Check now status card](DesignPreview/check-now-status-v1.1.png)
 
 ## Shared API architecture
 
