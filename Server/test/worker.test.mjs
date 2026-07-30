@@ -131,3 +131,29 @@ test("manual poll is protected by an admin token", async () => {
   );
   assert.equal(response.status, 401);
 });
+
+test("public health check never exposes upstream error details", async () => {
+  const kv = new FakeKV();
+  await kv.put(
+    "monitor-state",
+    JSON.stringify({
+      seeded: true,
+      seenIds: [],
+      checkedAt: "2026-07-29T00:06:00.000Z",
+      latestEvent: null,
+      lastError: "upstream response that must stay private",
+    }),
+  );
+
+  const response = await worker.fetch(
+    new Request("https://example.com/healthz"),
+    { TIBO_STATE: kv },
+  );
+  const body = await response.json();
+
+  assert.equal(response.status, 503);
+  assert.deepEqual(body, {
+    ok: false,
+    checkedAt: "2026-07-29T00:06:00.000Z",
+  });
+});

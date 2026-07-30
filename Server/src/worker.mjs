@@ -228,7 +228,6 @@ export default {
         {
           ok: state.lastError === null,
           checkedAt: state.checkedAt,
-          lastError: state.lastError,
         },
         state.lastError === null ? 200 : 503,
       );
