@@ -5,7 +5,11 @@ Codex limit reset.
 
 > Unofficial fan-made utility. Not affiliated with Tibo, X, or OpenAI.
 
-![Tibo, We Love You preview](DesignPreview/app-preview-v12-final.png)
+<img
+  src="DesignPreview/app-preview-v12-final.png"
+  alt="Tibo, We Love You preview"
+  width="342"
+>
 
 ## Download
 
@@ -45,7 +49,11 @@ appears, choose **More info → Run anyway**.
 When there is nothing new, `Check now` shows the latest feed time in a small,
 quiet card. Only a newly detected reset gets the animated red-button alert.
 
-![Check now status card](DesignPreview/check-now-status-v1.1.png)
+<img
+  src="DesignPreview/check-now-status-v1.1.png"
+  alt="Check now status card"
+  width="342"
+>
 
 ## Shared API architecture
 
