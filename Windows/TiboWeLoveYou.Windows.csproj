@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>TiboWeLoveYou</AssemblyName>
+    <RootNamespace>TiboWeLoveYou.Windows</RootNamespace>
+    <Version>1.1.0</Version>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <PublishTrimmed>false</PublishTrimmed>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource
+      Include="../Sources/TiboResetCoin/Resources/TiboButtonPhoto.png"
+      LogicalName="TiboButtonPhoto.png"
+    />
+    <EmbeddedResource
+      Include="../Sources/TiboResetCoin/Resources/CheckStatusEmoji.jpg"
+      LogicalName="CheckStatusEmoji.jpg"
+    />
+  </ItemGroup>
+</Project>

@@ -9,9 +9,10 @@ Codex limit reset.
 
 ## Download
 
-[Download the latest macOS build](https://github.com/Tiaivy/tibo-we-love-you/releases/latest/download/TiboWeLoveYou-macOS.zip)
+- [Download for macOS](https://github.com/Tiaivy/tibo-we-love-you/releases/latest/download/TiboWeLoveYou-macOS.zip)
+- [Download for Windows 10/11 x64](https://github.com/Tiaivy/tibo-we-love-you/releases/download/v1.1.0/TiboWeLoveYou-Windows-x64.zip)
 
-Requires macOS 13 or later.
+### macOS
 
 1. Download and unzip `TiboWeLoveYou-macOS.zip`.
 2. Move `TiboWeLoveYou.app` to Applications.
@@ -20,16 +21,24 @@ Requires macOS 13 or later.
 The app is ad-hoc signed but not Apple-notarized, so macOS may ask you to
 confirm it in **System Settings → Privacy & Security**.
 
+### Windows
+
+1. Download and unzip `TiboWeLoveYou-Windows-x64.zip`.
+2. Run `TiboWeLoveYou.exe`; it will live in the system tray.
+
+The Windows build is not code-signed yet. If Microsoft Defender SmartScreen
+appears, choose **More info → Run anyway**.
+
 ## What it does
 
-- Lives quietly in the macOS menu bar.
+- Lives quietly in the macOS menu bar or Windows system tray.
 - Watches a shared central feed for new posts from `@thsottiaux`.
 - Alerts only when a post clearly confirms a completed ChatGPT or Codex
   allowance reset.
 - Shows a compact, silent red-button animation in the top-right corner.
 - Gives `Check now` a lightweight status card with the latest feed time.
 - Keeps the alert visible until you close it or open the original post on X.
-- Never ships the TwitterAPI.io key inside the Mac app.
+- Never ships the TwitterAPI.io key inside either desktop app.
 
 ## Check now, but cuter
 
@@ -45,7 +54,7 @@ minutes, for a maximum of 144 upstream TwitterAPI.io requests per day. Every
 installed app reads the same cached result, so adding more users does not
 multiply TwitterAPI.io usage.
 
-The Mac app polls the
+Each desktop app polls the
 [shared feed](https://tiboweloveyou-feed.tiboweloveyou.workers.dev/v1/reset/latest)
 once per minute. The TwitterAPI.io key stays in Cloudflare and is never shipped
 inside the app. Server code and deployment instructions are in
