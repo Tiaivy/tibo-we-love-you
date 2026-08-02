@@ -43,6 +43,11 @@ const completedTerms = [
   "quota restored",
 ];
 
+const completedPatterns = [
+  /\b(?:i|we)\s+(?:have\s+|had\s+)?(?:already\s+|just\s+|now\s+)?reset\b/,
+  /\b(?:i|we)\s+(?:have\s+|had\s+)?(?:already\s+|just\s+|now\s+)?(?:refilled|replenished|restored)\b/,
+];
+
 const rejectedTerms = [
   "will reset",
   "will be reset",
@@ -79,12 +84,7 @@ const rejectedTerms = [
 ];
 
 export function classifyReset(text) {
-  const normalized = text
-    .toLowerCase()
-    .replaceAll("’", "'")
-    .split(/\s+/)
-    .join(" ")
-    .trim();
+  const normalized = normalizeText(text);
 
   if (normalized.includes("?")) {
     return null;
@@ -98,7 +98,10 @@ export function classifyReset(text) {
   if (!allowanceTerms.some((term) => normalized.includes(term))) {
     return null;
   }
-  if (!completedTerms.some((term) => normalized.includes(term))) {
+  if (
+    !completedTerms.some((term) => normalized.includes(term))
+    && !completedPatterns.some((pattern) => pattern.test(normalized))
+  ) {
     return null;
   }
   return "confirmed";
@@ -141,9 +144,7 @@ export async function pollTwitter(env, now = new Date()) {
     .sort((left, right) => tweetTimestamp(left) - tweetTimestamp(right));
   const classifiedTweets = originalTweets.map((tweet) => ({
     tweet,
-    signal: classifyReset(
-      typeof tweet.text === "string" ? tweet.text : "",
-    ),
+    ...classifyTweet(tweet),
   }));
   const observedLastResetAt = classifiedTweets
     .filter(({ signal }) => signal === "confirmed")
@@ -179,9 +180,14 @@ export async function pollTwitter(env, now = new Date()) {
   }
 
   let latestEvent = state.latestEvent;
-  for (const { tweet, signal } of classifiedTweets) {
+  for (const { tweet, signal, replayable } of classifiedTweets) {
     const id = tweetID(tweet);
-    if (!id || seen.has(id)) {
+    const createdAt = normalizedTweetDate(tweet, now);
+    const isReclassifiedReset =
+      signal === "confirmed"
+      && replayable
+      && Date.parse(createdAt) > Date.parse(storedLastResetAt);
+    if (!id || (seen.has(id) && !isReclassifiedReset)) {
       continue;
     }
     seen.add(id);
@@ -199,7 +205,7 @@ export async function pollTwitter(env, now = new Date()) {
         typeof tweet.url === "string" && tweet.url.length > 0
           ? tweet.url
           : `https://x.com/${SOURCE_USERNAME}/status/${id}`,
-      createdAt: normalizedTweetDate(tweet, now),
+      createdAt,
       detectedAt: now.toISOString(),
     };
   }
@@ -278,6 +284,27 @@ export default {
     );
   },
 };
+
+function classifyTweet(tweet) {
+  const text = typeof tweet.text === "string" ? tweet.text : "";
+  const normalized = normalizeText(text);
+  return {
+    signal: classifyReset(text),
+    replayable:
+      completedPatterns.some((pattern) => pattern.test(normalized))
+      && !completedTerms.some((term) => normalized.includes(term)),
+  };
+}
+
+function normalizeText(text) {
+  return text
+    .toLowerCase()
+    .replaceAll("’", "'")
+    .replace(/\b(i|we)'ve\b/g, "$1 have")
+    .split(/\s+/)
+    .join(" ")
+    .trim();
+}
 
 function requireBindings(env) {
   requireStateBinding(env);

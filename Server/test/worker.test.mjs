@@ -32,7 +32,24 @@ test("classifies only completed allowance resets", () => {
     classifyReset("Codex usage limits have now been reset."),
     "confirmed",
   );
+  assert.equal(
+    classifyReset(
+      "To celebrate a week of efficiency and let you run 100'000 Luna threads this weekend... that's right... wait for it... I have reset usage limits for Codex and ChatGPT Work. Enjoy.",
+    ),
+    "confirmed",
+  );
+  assert.equal(
+    classifyReset("I've just reset the weekly limits for ChatGPT and Codex."),
+    "confirmed",
+  );
+  assert.equal(
+    classifyReset("We have already reset the Codex usage caps."),
+    "confirmed",
+  );
   assert.equal(classifyReset("ChatGPT Work usage limits will reset tonight."), null);
+  assert.equal(classifyReset("I may reset Codex usage limits later."), null);
+  assert.equal(classifyReset("I have not reset Codex usage limits yet."), null);
+  assert.equal(classifyReset("Have I reset Codex usage limits?"), null);
   assert.equal(classifyReset("Codex usage limits have not been reset yet."), null);
   assert.equal(classifyReset("Have ChatGPT usage limits been reset?"), null);
   assert.equal(classifyReset("Usage limits have now been reset."), null);
@@ -162,6 +179,43 @@ test("poll backfills the last reset time without replaying an alert", async () =
 
   assert.equal(snapshot.event, null);
   assert.equal(snapshot.lastResetAt, "2026-07-30T00:00:00.000Z");
+});
+
+test("poll replays a newly classified reset newer than the stored reset", async () => {
+  const kv = new FakeKV();
+  await kv.put(
+    "monitor-state",
+    JSON.stringify({
+      seeded: true,
+      seenIds: ["missed"],
+      checkedAt: "2026-08-01T03:40:00.000Z",
+      latestEvent: null,
+      lastResetAt: "2026-07-29T04:09:02.981Z",
+      lastError: null,
+    }),
+  );
+  const env = {
+    TIBO_STATE: kv,
+    TWITTERAPI_IO_KEY: "test-only",
+    UPSTREAM_FETCH: async () =>
+      twitterResponse([
+        {
+          id: "missed",
+          text: "I have reset usage limits for Codex and ChatGPT Work.",
+          type: "tweet",
+          createdAt: "2026-08-01T03:32:37.508Z",
+        },
+      ]),
+  };
+
+  const snapshot = await pollTwitter(
+    env,
+    new Date("2026-08-01T07:10:00.000Z"),
+  );
+
+  assert.equal(snapshot.event.id, "missed");
+  assert.equal(snapshot.event.signal, "confirmed");
+  assert.equal(snapshot.lastResetAt, "2026-08-01T03:32:37.508Z");
 });
 
 test("older cached reset never overrides the verified baseline", async () => {
