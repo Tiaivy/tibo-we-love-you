@@ -218,6 +218,88 @@ test("poll replays a newly classified reset newer than the stored reset", async 
   assert.equal(snapshot.lastResetAt, "2026-08-01T03:32:37.508Z");
 });
 
+test("poll waits for an announced reset landing window before alerting", async () => {
+  const kv = new FakeKV();
+  await kv.put(
+    "monitor-state",
+    JSON.stringify({
+      seeded: true,
+      seenIds: [],
+      checkedAt: "2026-08-13T01:00:00.000Z",
+      latestEvent: null,
+      lastResetAt: "2026-08-08T20:29:22.000Z",
+      lastError: null,
+    }),
+  );
+  const tweet = {
+    id: "announced",
+    text: "Old news actually from a bunch of days ago, but crossed that 15M. Enjoy a nice reset everyone. Landing in the next hour or so, go /fast.",
+    type: "tweet",
+    createdAt: "2026-08-13T01:01:37.000Z",
+  };
+  const env = {
+    TIBO_STATE: kv,
+    TWITTERAPI_IO_KEY: "test-only",
+    UPSTREAM_FETCH: async () => twitterResponse([tweet]),
+  };
+
+  const pending = await pollTwitter(
+    env,
+    new Date("2026-08-13T01:45:00.000Z"),
+  );
+  assert.equal(pending.event, null);
+  assert.equal(pending.lastResetAt, "2026-08-08T20:29:22.000Z");
+
+  const landed = await pollTwitter(
+    env,
+    new Date("2026-08-13T02:05:00.000Z"),
+  );
+  assert.equal(landed.event.id, "announced");
+  assert.equal(landed.event.signal, "confirmed");
+  assert.equal(landed.lastResetAt, "2026-08-13T02:01:37.000Z");
+});
+
+test("poll never promotes vague reset hints", async () => {
+  const kv = new FakeKV();
+  await kv.put(
+    "monitor-state",
+    JSON.stringify({
+      seeded: true,
+      seenIds: [],
+      checkedAt: "2026-08-13T00:00:00.000Z",
+      latestEvent: null,
+      lastResetAt: "2026-08-08T20:29:22.000Z",
+      lastError: null,
+    }),
+  );
+  const env = {
+    TIBO_STATE: kv,
+    TWITTERAPI_IO_KEY: "test-only",
+    UPSTREAM_FETCH: async () =>
+      twitterResponse([
+        {
+          id: "tomorrow",
+          text: "Little surprise for you tomorrow. I previously promised a reset for every 1M additional Codex users.",
+          type: "tweet",
+          createdAt: "2026-08-12T00:00:00.000Z",
+        },
+        {
+          id: "feeling",
+          text: "I'm feeling like a limit reset.",
+          type: "tweet",
+          createdAt: "2026-08-12T01:00:00.000Z",
+        },
+      ]),
+  };
+
+  const snapshot = await pollTwitter(
+    env,
+    new Date("2026-08-13T03:00:00.000Z"),
+  );
+  assert.equal(snapshot.event, null);
+  assert.equal(snapshot.lastResetAt, "2026-08-08T20:29:22.000Z");
+});
+
 test("older cached reset never overrides the verified baseline", async () => {
   const kv = new FakeKV();
   await kv.put(

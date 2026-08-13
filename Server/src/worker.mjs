@@ -48,6 +48,12 @@ const completedPatterns = [
   /\b(?:i|we)\s+(?:have\s+|had\s+)?(?:already\s+|just\s+|now\s+)?(?:refilled|replenished|restored)\b/,
 ];
 
+const scheduledResetAudiencePattern =
+  /\b(?:usage\s+|rate\s+|limit\s+)?reset\s+(?:for\s+)?(?:everyone|all\b)/;
+const scheduledResetLandingPattern =
+  /\b(?:landing|arriving|rolling out)\s+(?:in|within)\s+(?:the\s+)?next\s+hour(?:\s+or\s+so)?\b/;
+const scheduledResetDelayMilliseconds = 60 * 60 * 1000;
+
 const rejectedTerms = [
   "will reset",
   "will be reset",
@@ -144,11 +150,11 @@ export async function pollTwitter(env, now = new Date()) {
     .sort((left, right) => tweetTimestamp(left) - tweetTimestamp(right));
   const classifiedTweets = originalTweets.map((tweet) => ({
     tweet,
-    ...classifyTweet(tweet),
+    ...classifyTweet(tweet, now),
   }));
   const observedLastResetAt = classifiedTweets
     .filter(({ signal }) => signal === "confirmed")
-    .map(({ tweet }) => normalizedTweetDate(tweet, now))
+    .map(({ effectiveResetAt }) => effectiveResetAt)
     .at(-1) ?? null;
   const storedLastResetAt = newerDate(
     INITIAL_LAST_RESET_AT,
@@ -180,13 +186,18 @@ export async function pollTwitter(env, now = new Date()) {
   }
 
   let latestEvent = state.latestEvent;
-  for (const { tweet, signal, replayable } of classifiedTweets) {
+  for (const {
+    tweet,
+    signal,
+    replayable,
+    effectiveResetAt,
+  } of classifiedTweets) {
     const id = tweetID(tweet);
     const createdAt = normalizedTweetDate(tweet, now);
     const isReclassifiedReset =
       signal === "confirmed"
       && replayable
-      && Date.parse(createdAt) > Date.parse(storedLastResetAt);
+      && Date.parse(effectiveResetAt) > Date.parse(storedLastResetAt);
     if (!id || (seen.has(id) && !isReclassifiedReset)) {
       continue;
     }
@@ -285,15 +296,45 @@ export default {
   },
 };
 
-function classifyTweet(tweet) {
+function classifyTweet(tweet, now) {
   const text = typeof tweet.text === "string" ? tweet.text : "";
   const normalized = normalizeText(text);
+  const directSignal = classifyReset(text);
+  const scheduledResetAt = scheduledResetDate(tweet, normalized);
+  const scheduledResetHasLanded =
+    scheduledResetAt !== null
+    && Date.parse(scheduledResetAt) <= now.getTime();
   return {
-    signal: classifyReset(text),
+    signal:
+      directSignal
+      ?? (scheduledResetHasLanded ? "confirmed" : null),
     replayable:
-      completedPatterns.some((pattern) => pattern.test(normalized))
-      && !completedTerms.some((term) => normalized.includes(term)),
+      (
+        completedPatterns.some((pattern) => pattern.test(normalized))
+        && !completedTerms.some((term) => normalized.includes(term))
+      )
+      || scheduledResetHasLanded,
+    effectiveResetAt:
+      directSignal === "confirmed"
+        ? normalizedTweetDate(tweet, now)
+        : scheduledResetHasLanded
+          ? scheduledResetAt
+          : null,
   };
+}
+
+function scheduledResetDate(tweet, normalizedText) {
+  if (
+    !scheduledResetAudiencePattern.test(normalizedText)
+    || !scheduledResetLandingPattern.test(normalizedText)
+  ) {
+    return null;
+  }
+
+  const createdAt = tweetTimestamp(tweet);
+  return createdAt > 0
+    ? new Date(createdAt + scheduledResetDelayMilliseconds).toISOString()
+    : null;
 }
 
 function normalizeText(text) {
